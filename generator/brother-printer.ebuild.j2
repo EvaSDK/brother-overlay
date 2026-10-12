@@ -1,0 +1,80 @@
+# Copyright 1999-2026 Gentoo Authors
+# Distributed under the terms of the GNU General Public License v2
+
+EAPI=8
+
+RPM_BUILD_NUMBER={{ lpd_pkg_version[1] }}
+RPM_COMPRESS_TYPE=none
+inherit linux-info rpm
+
+PRINTER_MODEL=${PN#*-}
+PRINTER_MODEL=${PRINTER_MODEL%-*}
+{%- if cupswrapper_pkg_url %}
+CUPSWRAPPER_PV="{{ cupswrapper_pkg_version[0] }}-{{ cupswrapper_pkg_version[1] }}"
+{%- endif %}
+
+DESCRIPTION="Brother printer driver for {{ commercial_name }}"
+HOMEPAGE="http://support.brother.com"
+SRC_URI="
+	{{ lpd_pkg_url}}
+{%- if cupswrapper_pkg_url %}
+	{{ cupswrapper_pkg_url }}
+{%- endif %}
+"
+S="${WORKDIR}"
+
+LICENSE="brother-eula GPL-2"
+SLOT="0"
+KEYWORDS="-* ~amd64 ~x86"
+IUSE=""
+
+RDEPEND="
+	net-print/cups
+	>=sys-libs/glibc-2.2.5
+	app-text/ghostscript-gpl
+	app-text/a2ps
+	{%- if cupswrapper_pkg_url is not defined %}
+	>=dev-lang/perl-5
+	{%- endif %}
+"
+
+RESTRICT="mirror strip"
+
+pkg_setup() {
+	CONFIG_CHECK=""
+	use amd64 && CONFIG_CHECK+="~IA32_EMULATION"
+
+	if [[ -n ${CONFIG_CHECK} ]]; then
+		linux-info_pkg_setup
+	fi
+}
+
+src_install() {
+	insinto opt/brother/Printers/${PRINTER_MODEL}
+	doins -r "${S}"/opt/brother/Printers/${PRINTER_MODEL}/inf
+
+	exeinto opt/brother/Printers/${PRINTER_MODEL}/lpd
+	doexe "${S}"/opt/brother/Printers/${PRINTER_MODEL}/lpd/*
+
+	# Printer configuration utility
+	dobin "${S}"/usr/bin/brprintconf_${PRINTER_MODEL}
+
+	# Install wrapping tools for CUPS
+	{%- if cupswrapper_pkg_url %}
+	exeinto opt/brother/Printers/${PRINTER_MODEL}/cupswrapper
+	doexe "${S}"/opt/brother/Printers/${PRINTER_MODEL}/cupswrapper/brcupsconfpt1
+
+	exeinto usr/libexec/cups/filter
+	doexe "${S}"/opt/brother/Printers/${PRINTER_MODEL}/cupswrapper/cupswrapper${PRINTER_MODEL}
+	{%- else %}
+	exeinto opt/brother/Printers/${PRINTER_MODEL}/cupswrapper
+	doexe "${S}"/opt/brother/Printers/${PRINTER_MODEL}/cupswrapper/brother_lpdwrapper_${PRINTER_MODEL}
+	doexe "${S}"/opt/brother/Printers/${PRINTER_MODEL}/cupswrapper/cupswrapper${PRINTER_MODEL}
+
+	exeinto usr/libexec/cups/filter
+	doexe "${S}"/opt/brother/Printers/${PRINTER_MODEL}/lpd/filter_${PRINTER_MODEL}
+	{%- endif %}
+
+	insinto usr/share/ppd/Brother
+	doins "${S}"/opt/brother/Printers/${PRINTER_MODEL}/cupswrapper/brother_${PRINTER_MODEL}_printer_en.ppd
+}
