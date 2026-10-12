@@ -2,6 +2,7 @@
 
 import configparser
 import re
+from collections import defaultdict
 from pathlib import Path
 
 import jinja2
@@ -49,7 +50,7 @@ def build_template_vars(model_data):
     )
     return {
         "name": model_name,
-        "commercial_name": model_data.name,
+        "commercial_names": {model_data.name},
         "cupswrapper_pkg_url": cupswrapper_pkg_url,
         "cupswrapper_pkg_version": cupswrapper_pkg_version,
         "lpd_pkg_url": lpd_pkg_url,
@@ -74,18 +75,20 @@ def generate_ebuilds():
     j2env = jinja2.Environment(loader=jinja2.FileSystemLoader("generator"))
     template = j2env.get_template("brother-printer.ebuild.j2")
 
-    from pprint import pprint
-    pprint(catalog)
-
-    for model_name, model_data in catalog.items():
+    # Reduce
+    commercial_names = defaultdict(set)
+    for model_name, model_data in list(catalog.items()):
         if not hasattr(model_data, "items"):
             print(model_name, "points to", model_data)
-            print(catalog[model_data])
-            model_data = catalog[model_data]
-            continue
+            commercial_names[model_data].add(model_name)
+            del catalog[model_name]
+        else:
+            commercial_names[model_name].add(model_name)
 
+    for model_name, model_data in catalog.items():
         try:
             tvars = build_template_vars(model_data)
+            tvars.update({"commercial_names": list(sorted(commercial_names[model_name]))})
         except ValueError:
             print("Skipping", model_name, "due to missing data.")
             continue
