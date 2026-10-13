@@ -61,7 +61,7 @@ def build_template_vars(model_data):
     )
     return {
         "name": model_name,
-        "commercial_names": {model_data.name},
+        "commercial_names": {normalize_commercial_name(model_data.name)},
         "cupswrapper_pkg_url": cupswrapper_pkg_url,
         "cupswrapper_pkg_version": cupswrapper_pkg_version,
         "lpd_pkg_url": lpd_pkg_url,
@@ -70,36 +70,27 @@ def build_template_vars(model_data):
 
 
 def generate_ebuilds():
-    catalog = {}
     config = configparser.ConfigParser()
+    config.read(Path("/home/eva/.cache/brother-overlay/infs").glob("*"))
 
-    for description in Path("workdir").glob("*"):
-        config.read(description)
-
-        for prn_section in config.sections():
+    commercial_names = defaultdict(set)
+    for prn_section in config.sections():
+        prn_name = normalize_commercial_name(prn_section)
+        if "LNK" in config[prn_section]:
+            target = config[prn_section]["LNK"]
+            commercial_names[target].add(prn_name)
+            config.remove_section(prn_section)
+        else:
             prn_clean = prn_section.replace("-", "")
-            if "LNK" in config[prn_section]:
-                catalog[prn_clean] = config[prn_section]["LNK"]
-            else:
-                catalog[prn_clean] = config[prn_section]
+            commercial_names[prn_clean].add(prn_name)
 
     j2env = jinja2.Environment(loader=jinja2.FileSystemLoader("generator"))
     template = j2env.get_template("brother-printer.ebuild.j2")
 
-    # Reduce
-    commercial_names = defaultdict(set)
-    for model_name, model_data in list(catalog.items()):
-        if not hasattr(model_data, "items"):
-            print(model_name, "points to", model_data)
-            commercial_names[model_data].add(model_name)
-            del catalog[model_name]
-        else:
-            commercial_names[model_name].add(model_name)
-
-    for model_name, model_data in catalog.items():
+    for prn_section in config.sections():
         try:
-            tvars = build_template_vars(model_data)
-            tvars.update({"commercial_names": list(sorted(commercial_names[model_name]))})
+            tvars = build_template_vars(config[prn_section])
+            tvars.update({"commercial_names": sorted(commercial_names[prn_section])})
         except ValueError:
             print("Skipping", model_name, "due to missing data.")
             continue
