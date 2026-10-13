@@ -98,7 +98,7 @@ def generate_ebuilds():
             Path("net-print")
             / f"brother-{tvars["name"]}-bin"
             / f"brother-{tvars["name"]}-bin-{tvars['lpd_pkg_version'][0]}.ebuild"
-        ).write_text(ebuild)
+        ).write_text(ebuild + "\n")
 
 
 if __name__ == "__main__":
