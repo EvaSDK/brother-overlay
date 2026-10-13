@@ -35,7 +35,7 @@ S="${WORKDIR}"
 -#}
 LICENSE="brother-eula no-source-code GPL-2"
 SLOT="0"
-KEYWORDS="-* ~amd64 ~x86"
+KEYWORDS="-* ~amd64 {%- if "i386" in lpd_pkg_url %} ~x86{% endif %}"
 IUSE=""
 
 RDEPEND="
@@ -50,6 +50,7 @@ RDEPEND="
 
 RESTRICT="strip"
 
+{% if "i386" in lpd_pkg_url -%}
 pkg_setup() {
 	CONFIG_CHECK=""
 	use amd64 && CONFIG_CHECK+="~IA32_EMULATION"
@@ -59,6 +60,7 @@ pkg_setup() {
 	fi
 }
 
+{% endif -%}
 src_install() {
 	insinto opt/brother/Printers/${PRINTER_MODEL}
 	doins -r "${S}"/opt/brother/Printers/${PRINTER_MODEL}/inf
