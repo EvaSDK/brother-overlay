@@ -12,7 +12,7 @@ BROTHER_PKG_BASEURL = "https://download.brother.com/pub/com/linux/linux/packages
 
 def get_version(filename):
     match = re.search(
-        r".*-(?P<version>[\d\.]+)-(?P<build>\d)(\.\w+)?\.[a-z0-9]+\.rpm", filename
+        r".*-(?P<version>[\d\.]+)-(?P<build>\d)(\.\w+)?\.(?P<arch>[a-z0-9_]+)\.rpm", filename
     )
     if match:
         return match.group("version"), match.group("build")
