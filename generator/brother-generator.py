@@ -10,6 +10,17 @@ import jinja2
 BROTHER_PKG_BASEURL = "https://download.brother.com/pub/com/linux/linux/packages"
 
 
+def normalize_commercial_name(printer_name):
+    """
+    Example:
+        >>> normalize_commercial_name("HLL2400DWE")
+        'HL-L2400DWE'
+    """
+    if "-" in printer_name:
+        return printer_name
+    return printer_name.replace("MFC", "MFC-").replace("DCP", "DCP-").replace("HL", "HL-")
+
+
 def get_version(filename):
     match = re.search(
         r".*-(?P<version>[\d\.]+)-(?P<build>\d)(\.\w+)?\.(?P<arch>[a-z0-9_]+)\.rpm", filename
