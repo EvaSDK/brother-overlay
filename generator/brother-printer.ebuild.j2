@@ -19,18 +19,20 @@ DESCRIPTION="Brother printer driver for {% if commercial_names|length > 2 -%}
 {{ commercial_names|join(" & ") }}
 {%- endif %}"
 HOMEPAGE="http://support.brother.com"
-SRC_URI="
-	{{ lpd_pkg_url}}
 {%- if cupswrapper_pkg_url %}
+SRC_URI="
+	{{ lpd_pkg_url }}
 	{{ cupswrapper_pkg_url }}
-{%- endif %}
 "
+{%- else %}
+SRC_URI="{{ lpd_pkg_url }}"
+{%- endif %}
 S="${WORKDIR}"
 
 {#
 	brother-eula and no-source-code applies to Brother binaries
 	GPL-2 applies to cupswrapper code
-#}
+-#}
 LICENSE="brother-eula no-source-code GPL-2"
 SLOT="0"
 KEYWORDS="-* ~amd64 ~x86"
