@@ -6,6 +6,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import jinja2
+import portage
 
 BROTHER_PKG_BASEURL = "https://download.brother.com/pub/com/linux/linux/packages"
 
@@ -86,6 +87,8 @@ def generate_ebuilds():
 
     j2env = jinja2.Environment(loader=jinja2.FileSystemLoader("generator"))
     template = j2env.get_template("brother-printer.ebuild.j2")
+    root = portage.root
+    portdb = portage.db[root]["porttree"].dbapi
 
     for prn_section in config.sections():
         try:
@@ -95,12 +98,21 @@ def generate_ebuilds():
             print("Skipping", model_name, "due to missing data.")
             continue
         ebuild = template.render(tvars)
-        (Path("net-print") / f"brother-{tvars["name"]}-bin").mkdir(exist_ok=True)
-        (
-            Path("net-print")
-            / f"brother-{tvars["name"]}-bin"
-            / f"brother-{tvars["name"]}-bin-{tvars['lpd_pkg_version'][0]}.ebuild"
-        ).write_text(ebuild + "\n")
+
+        # Find latest ebuild
+        pkg_name = f"brother-{tvars["name"]}-bin"
+        atom = f">=net-print/{pkg_name}-{tvars['lpd_pkg_version'][0]}"
+        best_match = portdb.xmatch("bestmatch-visible", atom)
+        if best_match:
+            version = portage.versions.cpv_getversion(best_match)
+            ebuild_fn = f"{pkg_name}-{version}.ebuild"
+        else:
+            ebuild_fn = f"{pkg_name}-{tvars['lpd_pkg_version'][0]}.ebuild"
+
+        # Write template
+        print("Writing", atom)
+        (Path("net-print") / pkg_name).mkdir(exist_ok=True)
+        (Path("net-print") / pkg_name / ebuild_fn).write_text(ebuild + "\n")
 
 
 if __name__ == "__main__":
